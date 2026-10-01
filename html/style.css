@@ -1,0 +1,2755 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+:root {
+    --apple-bg: rgba(22, 25, 32, 0.85);
+    --apple-card-bg: rgba(255, 255, 255, 0.08);
+    --apple-card-border: rgba(255, 255, 255, 0.18);
+    --apple-accent: #fa2d48;
+    --apple-accent-glow: rgba(250, 45, 72, 0.45);
+    --apple-text: #ffffff;
+    --apple-subtext: rgba(255, 255, 255, 0.68);
+    --apple-dock-bg: rgba(12, 14, 18, 0.85);
+    --font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --frame-bg: linear-gradient(135deg, rgba(25, 28, 38, 0.94) 0%, rgba(12, 14, 18, 0.97) 100%);
+    --frame-border: rgba(255, 255, 255, 0.2);
+    --frame-highlight: rgba(255, 255, 255, 0.38);
+    --frame-shadow: 0 25px 65px rgba(0, 0, 0, 0.65), inset 0 1px 1px rgba(255, 255, 255, 0.35), 0 0 35px var(--apple-accent-glow);
+    --frame-radius: 26px;
+    --card-radius: 18px;
+    --dock-radius: 12px;
+    --hud-bg: linear-gradient(135deg, rgba(26, 29, 38, 0.94) 0%, rgba(14, 16, 22, 0.97) 100%);
+    --hud-radius: 20px;
+    --glass-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(10, 12, 16, 0.6) 100%);
+    --ease-fluid: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html, body {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    font-family: var(--font-family);
+    color: var(--apple-text);
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* ==========================================================================
+   MINI-REPRODUCTOR / HUD WIDGET (Top-Left + Smooth Entrance Animation)
+   ========================================================================== */
+
+.hud-widget {
+    position: fixed;
+    top: 30px;
+    left: 30px;
+    width: 360px;
+    padding: 12px 16px;
+    border-radius: var(--hud-radius);
+    background: var(--hud-bg) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-top: 1px solid rgba(255, 255, 255, 0.35);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 999;
+    opacity: 1;
+    transform-origin: top left;
+    transform: translateY(0) scale(1);
+    transition: opacity 0.35s var(--ease-fluid), transform 0.38s cubic-bezier(0.34, 1.45, 0.64, 1), background 0.45s var(--ease-fluid), border-radius 0.5s var(--ease-fluid), box-shadow 0.45s ease, border-color 0.45s ease;
+}
+
+.hud-widget.hidden {
+    display: flex !important;
+    opacity: 0 !important;
+    transform: translateY(-25px) scale(0.85) !important;
+    pointer-events: none !important;
+}
+
+.hud-cover {
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    background: linear-gradient(135deg, #2b2e38, #14161d);
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.hud-note {
+    font-size: 22px;
+    color: var(--apple-subtext);
+}
+
+.hud-details {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.hud-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.hud-title {
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #ffffff;
+}
+
+.hud-subtitle {
+    font-size: 11px;
+    color: var(--apple-subtext);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hud-progress-bar {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 4px;
+}
+
+.hud-progress-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--apple-accent);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.equalizer-bars {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    height: 12px;
+}
+
+.equalizer-bars span {
+    width: 3px;
+    height: 100%;
+    background: var(--apple-accent);
+    border-radius: 2px;
+    transition: height 0.15s ease;
+}
+
+.equalizer-bars.paused span {
+    height: 3px !important;
+    opacity: 0.5;
+}
+
+.hud-keybind {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    padding: 6px 9px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    cursor: pointer;
+    transition: background 0.2s;
+    color: var(--apple-text);
+}
+
+.hud-keybind:hover {
+    background: rgba(255, 255, 255, 0.22);
+}
+
+.key-badge {
+    font-size: 11px;
+    font-weight: 800;
+    color: #ffffff;
+    background: var(--apple-accent);
+    padding: 1px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+}
+
+.key-label {
+    font-size: 8px;
+    color: var(--apple-subtext);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ==========================================================================
+   FLOATING CARPLAY POPUP WINDOW (Apple iOS Opening & Closing Animation)
+   ========================================================================== */
+
+#app {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: 30px;
+    background: transparent !important;
+    background-color: transparent !important;
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+#app.hidden {
+    display: flex !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+.carplay-frame {
+    pointer-events: auto;
+    position: relative;
+    width: 760px;
+    height: 450px;
+    border-radius: var(--frame-radius);
+    overflow: hidden;
+    background: var(--frame-bg);
+    border: 1px solid var(--frame-border);
+    border-top: 1px solid var(--frame-highlight);
+    box-shadow: var(--frame-shadow);
+    display: flex;
+    opacity: 1;
+    transform-origin: top left;
+    transform: translateY(0) scale(1);
+    transition: opacity 0.38s var(--ease-fluid), transform 0.42s cubic-bezier(0.34, 1.4, 0.64, 1), background 0.5s var(--ease-fluid), border-radius 0.55s var(--ease-fluid), box-shadow 0.5s ease, border-color 0.45s ease;
+}
+
+#app.hidden .carplay-frame {
+    opacity: 0 !important;
+    transform: translateY(-30px) scale(0.88) !important;
+}
+
+.ambient-bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    opacity: 0.25;
+    transition: background-image 0.8s ease;
+    z-index: 0;
+}
+
+.glass-overlay {
+    position: absolute;
+    inset: 0;
+    background: var(--glass-bg);
+    transition: background 0.5s var(--ease-fluid);
+    z-index: 1;
+}
+
+.carplay-dock {
+    position: relative;
+    z-index: 2;
+    width: 64px;
+    height: 100%;
+    background: var(--apple-dock-bg);
+    border-right: 1px solid rgba(255, 255, 255, 0.14);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 0;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    transform: translateX(0);
+    opacity: 1;
+}
+
+#app.hidden .carplay-dock {
+    transform: translateX(-20px);
+    opacity: 0;
+}
+
+.dock-top {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.dock-item {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--dock-radius);
+    border: 0;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--apple-subtext);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+
+.dock-item:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
+
+.dock-item.active {
+    background: var(--apple-accent);
+    color: #ffffff;
+    box-shadow: 0 4px 14px var(--apple-accent-glow);
+}
+
+.home-btn {
+    background: rgba(255, 255, 255, 0.14);
+    color: #ffffff;
+}
+
+.dock-divider {
+    width: 24px;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.15);
+    margin: 1px 0;
+}
+
+.dock-bottom {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.dock-clock {
+    font-size: 12px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: -0.2px;
+}
+
+.dock-status {
+    color: var(--apple-subtext);
+    opacity: 0.7;
+}
+
+.carplay-content {
+    position: relative;
+    z-index: 2;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 16px 20px;
+    overflow: hidden;
+}
+
+.carplay-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    transition: transform 0.42s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.42s cubic-bezier(0.16, 1, 0.3, 1);
+    transform: translateY(0);
+    opacity: 1;
+}
+
+#app.hidden .carplay-header {
+    transform: translateY(-15px);
+    opacity: 0;
+}
+
+.brand-tag {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--apple-accent);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.apple-logo {
+    font-size: 13px;
+}
+
+.header-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin-top: 1px;
+    color: #ffffff;
+}
+
+.close-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 0;
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s ease;
+}
+
+.close-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: scale(1.08);
+}
+
+.close-btn:active {
+    transform: scale(0.92);
+}
+
+.dashboard-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1.05fr 1fr;
+    gap: 14px;
+    min-height: 0;
+}
+
+.card {
+    background: var(--apple-card-bg);
+    border-radius: var(--card-radius);
+    transition: background 0.45s var(--ease-fluid), border-radius 0.5s var(--ease-fluid), border-color 0.45s ease, box-shadow 0.45s ease;
+    border: 1px solid var(--apple-card-border);
+    border-top: 1px solid rgba(255, 255, 255, 0.25);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transition: transform 0.45s cubic-bezier(0.34, 1.25, 0.64, 1), opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    transform: translateY(0) scale(1);
+    opacity: 1;
+}
+
+#app.hidden .card {
+    transform: translateY(20px) scale(0.94);
+    opacity: 0;
+}
+
+.player-card {
+    justify-content: space-between;
+}
+
+.cover-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 8px;
+}
+
+.cover-art {
+    width: 120px;
+    height: 120px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #232733, #0d0f14);
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.55), 0 4px 12px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    overflow: hidden;
+    position: relative;
+}
+
+.cover-photo {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center center;
+    display: block;
+    pointer-events: none;
+}
+
+.cover-fallback {
+    font-size: 40px;
+    color: var(--apple-subtext);
+    position: relative;
+    z-index: 1;
+}
+
+.player-info {
+    text-align: center;
+    margin-bottom: 6px;
+    overflow: hidden;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.track-title {
+    font-size: 15px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #ffffff;
+}
+
+.track-subtitle {
+    font-size: 11px;
+    color: var(--apple-subtext);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.scrubber-container {
+    margin-bottom: 8px;
+}
+
+.time-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--apple-subtext);
+    margin-bottom: 4px;
+    font-weight: 500;
+}
+
+.ios-range {
+    width: 100%;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+}
+
+.ios-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+    cursor: pointer;
+}
+
+.player-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-bottom: 6px;
+}
+
+.btn-control, .btn-secondary {
+    background: transparent;
+    border: 0;
+    color: var(--apple-subtext);
+    cursor: pointer;
+    transition: color 0.2s, background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    border-radius: 8px;
+}
+
+.btn-control:hover, .btn-secondary:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.btn-secondary.active {
+    color: var(--apple-accent);
+    background: rgba(250, 45, 72, 0.15);
+}
+
+.btn-play {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: 0;
+    background: var(--apple-accent);
+    color: #ffffff;
+    font-size: 17px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 0 20px rgba(250, 45, 72, 0.5), 0 4px 12px rgba(0, 0, 0, 0.4);
+    transition: background 0.2s;
+}
+
+.btn-play:hover {
+    background: #ff3b56;
+}
+
+.volume-slider-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-mute {
+    background: transparent;
+    border: 0;
+    color: var(--apple-subtext);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-mute:hover {
+    color: #ffffff;
+}
+
+.vol-range {
+    flex: 1;
+}
+
+.queue-card {
+    gap: 12px;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.input-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--apple-subtext);
+    margin-bottom: 5px;
+    display: block;
+}
+
+.input-group {
+    display: flex;
+    gap: 6px;
+}
+
+.input-wrapper {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-icon {
+    position: absolute;
+    left: 10px;
+    color: var(--apple-subtext);
+    pointer-events: none;
+}
+
+input[type="url"],
+input[type="search"] {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    padding: 8px 12px 8px 32px;
+    color: #ffffff;
+    font-size: 12px;
+    outline: none;
+    transition: border 0.2s, background 0.2s;
+}
+
+input[type="url"]:focus,
+input[type="search"]:focus {
+    border-color: var(--apple-accent);
+    background: rgba(255, 255, 255, 0.14);
+}
+
+.add-section {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex-shrink: 0;
+}
+
+.add-section.is-searching {
+    flex: 1;
+}
+
+.add-section.is-searching + .queue-section {
+    display: none;
+}
+
+.search-results {
+    margin-top: 10px;
+    min-height: 0;
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-right: 2px;
+}
+
+.search-list-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2px 4px 8px;
+    flex-shrink: 0;
+}
+
+.search-list-head span {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    color: #fff;
+}
+
+.search-list-close {
+    background: transparent;
+    border: 0;
+    color: var(--apple-subtext);
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.search-list-close:hover { color: #fff; }
+
+.ytm-row {
+    width: 100%;
+    font: inherit;
+    display: grid;
+    grid-template-columns: 48px 1fr auto auto;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 8px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+    color: #fff;
+}
+
+.ytm-row:hover { background: rgba(255, 255, 255, 0.08); }
+
+.ytm-cover {
+    width: 48px;
+    height: 48px;
+    border-radius: 6px;
+    background: #2a2a2a center/cover no-repeat;
+    flex: none;
+    overflow: hidden;
+    position: relative;
+}
+
+.ytm-meta {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ytm-title {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ytm-artist {
+    font-size: 11px;
+    color: var(--apple-subtext);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ytm-time {
+    font-size: 11px;
+    color: var(--apple-subtext);
+    min-width: 34px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.ytm-add {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+    font-size: 16px;
+    line-height: 1;
+}
+
+.ytm-row:hover .ytm-add {
+    background: var(--apple-accent);
+}
+
+.add-btn {
+    background: var(--apple-accent);
+    color: #ffffff;
+    border: 0;
+    border-radius: 10px;
+    padding: 0 14px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    box-shadow: 0 0 14px var(--apple-accent-glow);
+}
+
+.add-btn:hover {
+    background: #ff3b56;
+}
+
+.status-msg {
+    min-height: 14px;
+    font-size: 10px;
+    color: var(--apple-subtext);
+    margin-top: 4px;
+}
+
+.queue-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.queue-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.queue-header h3 {
+    font-size: 12px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.clear-btn {
+    background: transparent;
+    border: 0;
+    color: var(--apple-subtext);
+    font-size: 11px;
+    cursor: pointer;
+    transition: color 0.2s;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.clear-btn:hover {
+    color: var(--apple-accent);
+}
+
+.queue-list {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding-right: 2px;
+}
+
+.queue-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.queue-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+.queue-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    cursor: pointer;
+    transition: background 0.2s, border 0.2s;
+    min-width: 0;
+}
+
+.queue-item:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.queue-item.active {
+    background: rgba(250, 45, 72, 0.12);
+    border: 1px solid rgba(250, 45, 72, 0.25);
+    box-shadow: inset 0 0 10px rgba(250, 45, 72, 0.05);
+}
+
+.queue-index {
+    font-size: 11px;
+    font-weight: 700;
+    width: 16px;
+    min-width: 16px;
+    text-align: center;
+    color: var(--apple-subtext);
+    flex-shrink: 0;
+}
+
+.queue-item.active .queue-index {
+    color: var(--apple-accent);
+}
+
+.queue-thumb {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #2b2e38, #14161d);
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: var(--apple-subtext);
+    flex-shrink: 0;
+    overflow: hidden;
+    position: relative;
+}
+
+.queue-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.queue-title-text {
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #ffffff;
+}
+
+.queue-sub-text {
+    font-size: 10px;
+    color: var(--apple-subtext);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.remove-btn {
+    border: 0;
+    background: transparent;
+    color: var(--apple-subtext);
+    font-size: 15px;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: color 0.2s, background 0.2s;
+    flex-shrink: 0;
+    min-width: 20px;
+}
+
+.remove-btn:hover {
+    color: #ff453a;
+    background: rgba(255, 69, 58, 0.15);
+}
+
+/* RADIO GRID VIEW */
+.radio-grid-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.radio-header {
+    margin-bottom: 12px;
+}
+
+.radio-header h2 {
+    font-size: 16px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.radio-subtitle {
+    font-size: 11px;
+    color: var(--apple-subtext);
+}
+
+.radio-grid {
+    flex: 1;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    padding-right: 4px;
+}
+
+.radio-grid::-webkit-scrollbar {
+    width: 4px;
+}
+
+.radio-grid::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+.radio-card-item {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 14px;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: background 0.2s, border 0.2s;
+}
+
+.radio-card-item:hover {
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.radio-card-item.active {
+    background: color-mix(in srgb, var(--apple-accent) 18%, transparent);
+    border-color: color-mix(in srgb, var(--apple-accent) 50%, transparent);
+}
+
+.radio-icon-box {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.radio-name-text {
+    font-size: 12px;
+    font-weight: 600;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* PARTY MUSIC */
+.party-container {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+}
+
+.party-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    gap: 10px;
+}
+
+.party-hero {
+    width: 54px;
+    height: 54px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    background: color-mix(in srgb, var(--apple-accent) 20%, transparent);
+    border: 1px solid color-mix(in srgb, var(--apple-accent) 45%, transparent);
+}
+
+.party-panel h2 {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.party-panel p,
+.party-or {
+    font-size: 12px;
+    color: var(--apple-subtext);
+    line-height: 1.4;
+}
+
+.party-primary,
+.party-leave {
+    border: 0;
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    color: #fff;
+}
+
+.party-primary {
+    background: var(--apple-accent);
+    align-self: flex-start;
+}
+
+.party-primary:hover {
+    opacity: 0.9;
+}
+
+.party-leave {
+    background: rgba(255, 69, 58, 0.18);
+    color: #ff453a;
+}
+
+.party-top,
+.party-tools-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.party-members-wrap h3,
+.party-tools-head h3 {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    color: var(--apple-subtext);
+}
+
+.party-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow-y: auto;
+    max-height: 120px;
+    padding-right: 2px;
+}
+
+.party-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 8px 10px;
+}
+
+.party-row-name {
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.party-row-meta {
+    font-size: 11px;
+    color: var(--apple-subtext);
+}
+
+.party-row button {
+    border: 0;
+    border-radius: 8px;
+    background: rgba(191, 90, 242, 0.2);
+    color: #e5c4ff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 6px 8px;
+    cursor: pointer;
+}
+
+.party-id-row {
+    margin-top: 4px;
+}
+
+#partyHostTools {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+}
+
+.party-toast {
+    position: fixed;
+    left: 50%;
+    bottom: 8%;
+    transform: translateX(-50%);
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-width: 320px;
+    max-width: 520px;
+    padding: 14px 16px;
+    border-radius: var(--card-radius);
+    background: var(--hud-bg);
+    border: 1px solid color-mix(in srgb, var(--apple-accent) 45%, transparent);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+.party-toast-copy strong {
+    display: block;
+    font-size: 14px;
+}
+
+.party-toast-copy p {
+    font-size: 12px;
+    color: var(--apple-subtext);
+    margin-top: 2px;
+}
+
+.party-toast-actions {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.dock-item.party-live {
+    box-shadow: 0 0 0 2px rgba(191, 90, 242, 0.85);
+}
+
+/* PHONE VIEW */
+.phone-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.phone-card {
+    text-align: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-top: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 20px;
+    padding: 30px;
+    max-width: 400px;
+}
+
+.phone-icon-big {
+    font-size: 45px;
+    margin-bottom: 10px;
+}
+
+.phone-card h2 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 4px;
+}
+
+.phone-card p {
+    font-size: 12px;
+    color: var(--apple-subtext);
+    margin-bottom: 16px;
+}
+
+.phone-badges {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.badge {
+    background: rgba(250, 45, 72, 0.15);
+    border: 1px solid rgba(250, 45, 72, 0.3);
+    color: var(--apple-accent);
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+#youtubePlayer {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+/* ==========================================================================
+   TRACK CHANGE ANIMATION & GLOW EFFECTS
+   ========================================================================== */
+
+.cover-art, .hud-cover {
+    transition: transform 0.3s cubic-bezier(0.34, 1.4, 0.64, 1), opacity 0.25s ease, box-shadow 0.35s ease !important;
+}
+
+.track-title, .track-subtitle, .hud-title, .hud-subtitle {
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease !important;
+}
+
+.track-changing {
+    opacity: 0.15 !important;
+    transform: translateY(10px) scale(0.92) !important;
+}
+
+.cover-art.track-bump {
+    transform: scale(1.08) !important;
+    box-shadow: 0 0 35px var(--apple-accent-glow), 0 12px 32px rgba(0, 0, 0, 0.65) !important;
+}
+
+.hud-cover.track-bump {
+    transform: scale(1.12) !important;
+    box-shadow: 0 0 20px var(--apple-accent-glow) !important;
+}
+
+.hud-widget.hud-pulse {
+    animation: hudGlowPulse 0.85s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+@keyframes hudGlowPulse {
+    0% {
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+    40% {
+        box-shadow: 0 0 40px var(--apple-accent-glow), 0 15px 35px rgba(0, 0, 0, 0.7), inset 0 0 15px rgba(250, 45, 72, 0.3);
+        border-color: rgba(250, 45, 72, 0.8);
+        transform: translateY(-2px) scale(1.02);
+    }
+    100% {
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.2);
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* ==========================================================================
+   THEMES
+   ========================================================================== */
+
+.theme-view {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.theme-grid {
+    flex: 1;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding-right: 4px;
+}
+
+.theme-card {
+    text-align: left;
+    color: #fff;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 16px;
+    padding: 10px;
+    transition: transform 0.28s var(--ease-fluid), border-color 0.28s ease, background 0.28s ease, box-shadow 0.28s ease;
+}
+
+.theme-card:hover {
+    transform: translateY(-3px);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.theme-card.active {
+    border-color: var(--apple-accent);
+    box-shadow: 0 0 0 1px var(--apple-accent), 0 10px 24px var(--apple-accent-glow);
+}
+
+.theme-preview {
+    height: 58px;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    margin-bottom: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.theme-preview i {
+    display: block;
+    height: 100%;
+}
+
+.theme-preview i:first-child {
+    width: 18%;
+}
+
+.theme-preview i:last-child {
+    flex: 1;
+}
+
+.theme-card strong {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.theme-card span {
+    display: block;
+    margin-top: 2px;
+    font-size: 11px;
+    color: var(--apple-subtext);
+    line-height: 1.35;
+}
+
+html[data-theme="android"],
+html[data-theme="android-dark"] {
+    --apple-bg: #000000;
+    --apple-card-bg: transparent;
+    --apple-card-border: transparent;
+    --apple-accent: #ffffff;
+    --apple-accent-glow: rgba(255, 255, 255, 0.08);
+    --apple-text: #e8eaed;
+    --apple-subtext: #9aa0a6;
+    --apple-dock-bg: #000000;
+    --font-family: Roboto, "Segoe UI", Helvetica, Arial, sans-serif;
+    --frame-bg: #000000;
+    --frame-border: transparent;
+    --frame-highlight: transparent;
+    --frame-shadow: none;
+    --frame-radius: 4px;
+    --card-radius: 0px;
+    --dock-radius: 16px;
+    --hud-bg: #000000;
+    --hud-radius: 16px;
+    --glass-bg: #000000;
+}
+
+html[data-theme="android"] .carplay-frame,
+html[data-theme="android-dark"] .carplay-frame{
+    flex-direction: column;
+    width: 820px;
+    height: 500px;
+}
+
+html[data-theme="android"] .carplay-dock,
+html[data-theme="android-dark"] .carplay-dock{
+    width: 100%;
+    height: 64px;
+    flex-direction: row;
+    order: 2;
+    border-right: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 0 14px;
+}
+
+html[data-theme="android"] .dock-top,
+html[data-theme="android-dark"] .dock-top{
+    flex-direction: row;
+    flex: 1;
+    justify-content: space-evenly;
+}
+
+html[data-theme="android"] .dock-bottom,
+html[data-theme="android-dark"] .dock-bottom{
+    flex-direction: row;
+    gap: 8px;
+}
+
+html[data-theme="android"] .dock-divider,
+html[data-theme="android-dark"] .dock-divider{
+    width: 1px;
+    height: 22px;
+    margin: 0;
+}
+
+html[data-theme="android"] .dock-item.active,
+html[data-theme="android-dark"] .dock-item.active{
+    background: #e8eaed;
+    color: #202124;
+    box-shadow: none;
+}
+
+html[data-theme="aurora"] {
+    --apple-card-bg: rgba(255, 255, 255, 0.07);
+    --apple-card-border: rgba(186, 230, 253, 0.22);
+    --apple-accent: #67e8f9;
+    --apple-accent-glow: rgba(139, 92, 246, 0.45);
+    --apple-subtext: rgba(224, 242, 254, 0.72);
+    --apple-dock-bg: rgba(8, 12, 28, 0.72);
+    --font-family: "Segoe UI", "SF Pro Display", sans-serif;
+    --frame-bg: linear-gradient(145deg, rgba(15, 23, 42, 0.9) 0%, rgba(49, 16, 78, 0.88) 55%, rgba(8, 47, 73, 0.92) 100%);
+    --frame-border: rgba(125, 211, 252, 0.28);
+    --frame-highlight: rgba(255, 255, 255, 0.45);
+    --frame-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 0 40px rgba(103, 232, 249, 0.18);
+    --frame-radius: 32px;
+    --card-radius: 22px;
+    --dock-radius: 16px;
+    --hud-bg: linear-gradient(135deg, rgba(15, 23, 42, 0.88), rgba(76, 29, 149, 0.72));
+    --hud-radius: 24px;
+    --glass-bg: linear-gradient(160deg, rgba(255, 255, 255, 0.14), rgba(15, 23, 42, 0.35));
+}
+
+html[data-theme="aurora"] .carplay-frame::after {
+    content: none;
+}
+
+html[data-theme="carbon"] {
+    --apple-card-bg: rgba(255, 255, 255, 0.035);
+    --apple-card-border: rgba(255, 255, 255, 0.1);
+    --apple-accent: #e5e7eb;
+    --apple-accent-glow: rgba(255, 255, 255, 0.16);
+    --apple-subtext: rgba(255, 255, 255, 0.5);
+    --apple-dock-bg: #050505;
+    --font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+    --frame-bg: #070707;
+    --frame-border: rgba(255, 255, 255, 0.1);
+    --frame-highlight: rgba(255, 255, 255, 0.16);
+    --frame-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+    --frame-radius: 14px;
+    --card-radius: 10px;
+    --dock-radius: 8px;
+    --hud-bg: rgba(8, 8, 8, 0.92);
+    --hud-radius: 12px;
+    --glass-bg: transparent;
+}
+
+html[data-theme="carbon"] .dock-item.active {
+    color: #111;
+}
+
+html[data-theme="sunset"] {
+    --apple-card-bg: rgba(255, 255, 255, 0.08);
+    --apple-card-border: rgba(253, 186, 116, 0.22);
+    --apple-accent: #fb7185;
+    --apple-accent-glow: rgba(251, 146, 60, 0.4);
+    --apple-subtext: rgba(255, 237, 213, 0.72);
+    --apple-dock-bg: rgba(42, 18, 14, 0.88);
+    --font-family: "Segoe UI", "SF Pro Display", sans-serif;
+    --frame-bg: linear-gradient(160deg, rgba(67, 20, 27, 0.92) 0%, rgba(124, 45, 18, 0.9) 48%, rgba(30, 16, 28, 0.94) 100%);
+    --frame-border: rgba(254, 215, 170, 0.28);
+    --frame-highlight: rgba(255, 237, 213, 0.4);
+    --frame-shadow: 0 24px 55px rgba(0, 0, 0, 0.5), 0 0 32px rgba(251, 113, 133, 0.18);
+    --frame-radius: 30px;
+    --card-radius: 20px;
+    --dock-radius: 14px;
+    --hud-bg: linear-gradient(120deg, rgba(67, 20, 27, 0.9), rgba(154, 52, 18, 0.82));
+    --hud-radius: 22px;
+    --glass-bg: linear-gradient(160deg, rgba(255, 220, 180, 0.12), rgba(40, 10, 16, 0.4));
+}
+
+@keyframes themeSheen {
+    0% { transform: translateX(-55%); }
+    55% { transform: translateX(55%); }
+    100% { transform: translateX(55%); }
+}
+
+html:not([data-theme="android"]):not([data-theme="android-dark"]):not([data-theme="carbon"]):not([data-theme="spotify"]):not([data-theme="ios"]):not([data-theme="ios-dark"]) .hud-widget,
+html:not([data-theme="android"]):not([data-theme="android-dark"]):not([data-theme="carbon"]):not([data-theme="spotify"]):not([data-theme="ios"]):not([data-theme="ios-dark"]) .carplay-frame {
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+html:not([data-theme="android"]):not([data-theme="android-dark"]):not([data-theme="carbon"]):not([data-theme="spotify"]):not([data-theme="ios"]):not([data-theme="ios-dark"]) .hud-cover,
+html:not([data-theme="android"]):not([data-theme="android-dark"]):not([data-theme="carbon"]):not([data-theme="spotify"]):not([data-theme="ios"]):not([data-theme="ios-dark"]) .cover-art {
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+}
+
+html:not([data-theme="android"]):not([data-theme="android-dark"]):not([data-theme="carbon"]):not([data-theme="spotify"]):not([data-theme="ios"]):not([data-theme="ios-dark"]) .hud-progress-bar {
+    height: 5px;
+    background: rgba(255, 255, 255, 0.22);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.cover-overlay { display: none; }
+
+/* CarPlay — pantalla clara iFruit / Now Playing */
+html[data-theme="ios"],
+html[data-theme="ios-dark"] {
+    --apple-bg: #ffffff;
+    --apple-card-bg: #ffffff;
+    --apple-card-border: transparent;
+    --apple-accent: #111111;
+    --apple-accent-glow: transparent;
+    --apple-text: #1c1c1e;
+    --apple-subtext: #6e6e73;
+    --apple-dock-bg: #ffffff;
+    --font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", sans-serif;
+    --frame-bg: #ffffff;
+    --frame-border: transparent;
+    --frame-highlight: transparent;
+    --frame-shadow: 0 22px 55px rgba(0, 0, 0, 0.32);
+    --frame-radius: 22px;
+    --card-radius: 18px;
+    --dock-radius: 12px;
+    --hud-bg: #ffffff;
+    --hud-radius: 18px;
+    --glass-bg: #ffffff;
+}
+
+html[data-theme="ios"] .carplay-frame,
+html[data-theme="ios-dark"] .carplay-frame{
+    width: 820px;
+    height: 468px;
+    border: 0;
+    box-shadow: 0 22px 55px rgba(0, 0, 0, 0.32);
+}
+
+html[data-theme="ios"] .ambient-bg,
+html[data-theme="ios-dark"] .ambient-bg{ display: none; }
+html[data-theme="ios"] .glass-overlay,
+html[data-theme="ios-dark"] .glass-overlay{ background: #fff; }
+
+html[data-theme="ios"] .carplay-dock,
+html[data-theme="ios-dark"] .carplay-dock{
+    width: 70px;
+    background: #fff;
+    border-right: 1px solid #efeff4;
+}
+
+html[data-theme="ios"] .dock-item,
+html[data-theme="ios-dark"] .dock-item,
+html[data-theme="ios"] .home-btn,
+html[data-theme="ios-dark"] .home-btn{
+    background: transparent;
+    color: #8e8e93;
+    box-shadow: none;
+}
+
+html[data-theme="ios"] .dock-item:hover,
+html[data-theme="ios-dark"] .dock-item:hover{
+    background: #f2f2f7;
+    color: #1c1c1e;
+}
+
+html[data-theme="ios"] .dock-item.active,
+html[data-theme="ios-dark"] .dock-item.active{
+    background: transparent;
+    color: #ff2d55;
+    box-shadow: none;
+}
+
+html[data-theme="ios"] #tabRadioBtn,
+html[data-theme="ios-dark"] #tabRadioBtn{ color: #0a84ff; }
+html[data-theme="ios"] #tabPhoneBtn,
+html[data-theme="ios-dark"] #tabPhoneBtn{ color: #30d158; }
+html[data-theme="ios"] #tabMusicBtn.active,
+html[data-theme="ios-dark"] #tabMusicBtn.active{ color: #ff2d55; }
+html[data-theme="ios"] #dockHomeBtn,
+html[data-theme="ios-dark"] #dockHomeBtn{ color: #1c1c1e; }
+
+html[data-theme="ios"] .dock-divider,
+html[data-theme="ios-dark"] .dock-divider{ background: #e5e5ea; }
+html[data-theme="ios"] .dock-clock,
+html[data-theme="ios-dark"] .dock-clock{ color: #1c1c1e; }
+html[data-theme="ios"] .dock-status,
+html[data-theme="ios-dark"] .dock-status{ color: #8e8e93; }
+
+html[data-theme="ios"] .brand-tag,
+html[data-theme="ios-dark"] .brand-tag{
+    color: #1c1c1e;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+html[data-theme="ios"] .header-title,
+html[data-theme="ios-dark"] .header-title{
+    color: #8e8e93;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+html[data-theme="ios"] .close-btn,
+html[data-theme="ios-dark"] .close-btn{
+    background: #f2f2f7;
+    color: #1c1c1e;
+}
+
+html[data-theme="ios"] .close-btn:hover,
+html[data-theme="ios-dark"] .close-btn:hover{ background: #e5e5ea; }
+
+html[data-theme="ios"] .dashboard-grid,
+html[data-theme="ios-dark"] .dashboard-grid{
+    grid-template-columns: 1.15fr 0.95fr;
+    gap: 12px;
+}
+
+html[data-theme="ios"] .card,
+html[data-theme="ios-dark"] .card{
+    background: #fff;
+    border: 0;
+    border-top: 0;
+    box-shadow: none;
+}
+
+html[data-theme="ios"] .player-card,
+html[data-theme="ios-dark"] .player-card{
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+    grid-template-areas:
+        "cover info"
+        "controls controls"
+        "scrub scrub"
+        "volume volume";
+    align-items: center;
+    gap: 10px 16px;
+    padding: 18px 16px 12px;
+}
+
+html[data-theme="ios"] .cover-wrapper,
+html[data-theme="ios-dark"] .cover-wrapper{
+    grid-area: cover;
+    margin: 0;
+}
+
+html[data-theme="ios"] .cover-art,
+html[data-theme="ios-dark"] .cover-art{
+    width: 88px;
+    height: 88px;
+    border-radius: 10px;
+    border: 0;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+    background: #f2f2f7;
+}
+
+html[data-theme="ios"] .player-info,
+html[data-theme="ios-dark"] .player-info{
+    grid-area: info;
+    text-align: left;
+    margin: 0;
+}
+
+html[data-theme="ios"] .track-title,
+html[data-theme="ios-dark"] .track-title{
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: #1c1c1e;
+}
+
+html[data-theme="ios"] .track-subtitle,
+html[data-theme="ios-dark"] .track-subtitle{
+    font-size: 15px;
+    color: #6e6e73;
+    margin-top: 4px;
+}
+
+html[data-theme="ios"] .player-controls,
+html[data-theme="ios-dark"] .player-controls{
+    grid-area: controls;
+    justify-content: space-between;
+    padding: 8px 18px 0;
+    margin: 0;
+}
+
+html[data-theme="ios"] .btn-control,
+html[data-theme="ios-dark"] .btn-control,
+html[data-theme="ios"] .btn-secondary,
+html[data-theme="ios-dark"] .btn-secondary,
+html[data-theme="ios"] .btn-mute,
+html[data-theme="ios-dark"] .btn-mute{
+    color: #1c1c1e;
+}
+
+html[data-theme="ios"] .btn-control:hover,
+html[data-theme="ios-dark"] .btn-control:hover,
+html[data-theme="ios"] .btn-secondary:hover,
+html[data-theme="ios-dark"] .btn-secondary:hover,
+html[data-theme="ios"] .btn-mute:hover,
+html[data-theme="ios-dark"] .btn-mute:hover{
+    color: #000;
+    background: #f2f2f7;
+}
+
+html[data-theme="ios"] .btn-secondary.active,
+html[data-theme="ios-dark"] .btn-secondary.active{
+    color: #ff2d55;
+    background: rgba(255, 45, 85, 0.1);
+}
+
+html[data-theme="ios"] .btn-play,
+html[data-theme="ios-dark"] .btn-play,
+html[data-theme="ios"] .btn-play:hover,
+html[data-theme="ios-dark"] .btn-play:hover{
+    width: 44px;
+    height: 44px;
+    background: transparent;
+    color: #1c1c1e;
+    box-shadow: none;
+}
+
+html[data-theme="ios"] .scrubber-container,
+html[data-theme="ios-dark"] .scrubber-container{ grid-area: scrub; }
+html[data-theme="ios"] .volume-slider-group,
+html[data-theme="ios-dark"] .volume-slider-group{ grid-area: volume; }
+
+html[data-theme="ios"] .ios-range,
+html[data-theme="ios-dark"] .ios-range{ background: #e5e5ea; }
+html[data-theme="ios"] .ios-range::-webkit-slider-thumb,
+html[data-theme="ios-dark"] .ios-range::-webkit-slider-thumb{
+    background: #1c1c1e;
+    box-shadow: none;
+}
+
+html[data-theme="ios"] .input-label,
+html[data-theme="ios-dark"] .input-label{ color: #6e6e73; }
+
+html[data-theme="ios"],
+html[data-theme="ios-dark"] input[type="url"],
+html[data-theme="ios"],
+html[data-theme="ios-dark"] input[type="search"],
+html[data-theme="ios"],
+html[data-theme="ios-dark"] input[type="text"],
+html[data-theme="ios"],
+html[data-theme="ios-dark"] input[type="number"] {
+    background: #f2f2f7;
+    border: 0;
+    color: #1c1c1e;
+}
+
+html[data-theme="ios"],
+html[data-theme="ios-dark"] input[type="search"]:focus,
+html[data-theme="ios"],
+html[data-theme="ios-dark"] input[type="text"]:focus {
+    background: #eaeaef;
+    border-color: transparent;
+}
+
+html[data-theme="ios"] .add-btn,
+html[data-theme="ios-dark"] .add-btn{
+    background: #1c1c1e;
+    color: #fff;
+    box-shadow: none;
+}
+
+html[data-theme="ios"] .add-btn:hover,
+html[data-theme="ios-dark"] .add-btn:hover{ background: #000; }
+
+html[data-theme="ios"] .queue-header h3,
+html[data-theme="ios-dark"] .queue-header h3,
+html[data-theme="ios"] .search-list-head span,
+html[data-theme="ios-dark"] .search-list-head span{ color: #1c1c1e; }
+
+html[data-theme="ios"] .clear-btn,
+html[data-theme="ios-dark"] .clear-btn{ color: #6e6e73; }
+
+html[data-theme="ios"] .queue-item,
+html[data-theme="ios-dark"] .queue-item{
+    background: #f2f2f7;
+    border: 0;
+    border-radius: 16px;
+    margin-bottom: 6px;
+}
+
+html[data-theme="ios"] .queue-item.active,
+html[data-theme="ios-dark"] .queue-item.active{
+    background: linear-gradient(135deg, #d3203a, #8b1530);
+}
+
+html[data-theme="ios"] .queue-item.active .queue-title-text,
+html[data-theme="ios-dark"] .queue-item.active .queue-title-text,
+html[data-theme="ios"] .queue-item.active .queue-sub-text,
+html[data-theme="ios-dark"] .queue-item.active .queue-sub-text,
+html[data-theme="ios"] .queue-item.active .queue-index,
+html[data-theme="ios-dark"] .queue-item.active .queue-index{ color: #fff; }
+
+html[data-theme="ios"] .queue-title-text,
+html[data-theme="ios-dark"] .queue-title-text{ color: #1c1c1e; }
+html[data-theme="ios"] .queue-sub-text,
+html[data-theme="ios-dark"] .queue-sub-text{ color: #6e6e73; }
+
+html[data-theme="ios"] .ytm-row,
+html[data-theme="ios-dark"] .ytm-row{ color: #1c1c1e; }
+html[data-theme="ios"] .ytm-row:hover,
+html[data-theme="ios-dark"] .ytm-row:hover{ background: #f2f2f7; }
+html[data-theme="ios"] .ytm-artist,
+html[data-theme="ios-dark"] .ytm-artist{ color: #6e6e73; }
+
+html[data-theme="ios"] .radio-card-item,
+html[data-theme="ios-dark"] .radio-card-item,
+html[data-theme="ios"] .phone-card,
+html[data-theme="ios-dark"] .phone-card,
+html[data-theme="ios"] .party-panel,
+html[data-theme="ios-dark"] .party-panel,
+html[data-theme="ios"] .theme-card,
+html[data-theme="ios-dark"] .theme-card{
+    background: #f2f2f7;
+    border: 0;
+    box-shadow: none;
+    color: #1c1c1e;
+}
+
+html[data-theme="ios"] .theme-card.active,
+html[data-theme="ios-dark"] .theme-card.active{
+    box-shadow: inset 0 0 0 2px #1c1c1e;
+}
+
+html[data-theme="ios"] .radio-header h2,
+html[data-theme="ios-dark"] .radio-header h2,
+html[data-theme="ios"] .phone-card h2,
+html[data-theme="ios-dark"] .phone-card h2,
+html[data-theme="ios"] .party-panel h2,
+html[data-theme="ios-dark"] .party-panel h2{ color: #1c1c1e; }
+
+html[data-theme="ios"] .party-primary,
+html[data-theme="ios-dark"] .party-primary{
+    background: #1c1c1e;
+    color: #fff;
+    box-shadow: none;
+}
+
+html[data-theme="ios"] .hud-widget,
+html[data-theme="ios-dark"] .hud-widget{
+    background: #fff !important;
+    border: 0;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.16);
+}
+
+html[data-theme="ios"] .hud-title,
+html[data-theme="ios-dark"] .hud-title{ color: #1c1c1e; }
+html[data-theme="ios"] .hud-subtitle,
+html[data-theme="ios-dark"] .hud-subtitle{ color: #6e6e73; }
+html[data-theme="ios"] .hud-progress-bar,
+html[data-theme="ios-dark"] .hud-progress-bar{ background: #e5e5ea; box-shadow: none; }
+html[data-theme="ios"] .hud-progress-fill,
+html[data-theme="ios-dark"] .hud-progress-fill,
+html[data-theme="ios"] .equalizer-bars span,
+html[data-theme="ios-dark"] .equalizer-bars span{ background: #ff2d55; }
+html[data-theme="ios"] .key-badge,
+html[data-theme="ios-dark"] .key-badge{ background: #1c1c1e; color: #fff; }
+html[data-theme="ios"] .key-label,
+html[data-theme="ios-dark"] .key-label{ color: #6e6e73; }
+
+html[data-theme="ios-dark"] {
+    --apple-bg: #000000;
+    --apple-card-bg: #1c1c1e;
+    --apple-text: #f2f2f7;
+    --apple-subtext: #8e8e93;
+    --apple-dock-bg: #000000;
+    --apple-accent: #f2f2f7;
+    --frame-bg: #000000;
+    --glass-bg: #000000;
+    --hud-bg: #1c1c1e;
+}
+
+html[data-theme="ios-dark"] .glass-overlay { background: #000 !important; }
+html[data-theme="ios-dark"] .carplay-dock {
+    background: #000;
+    border-right-color: #2c2c2e;
+}
+html[data-theme="ios-dark"] .dock-item,
+html[data-theme="ios-dark"] .home-btn { color: #8e8e93; }
+html[data-theme="ios-dark"] .dock-item:hover {
+    background: #1c1c1e;
+    color: #fff;
+}
+html[data-theme="ios-dark"] #dockHomeBtn { color: #f2f2f7; }
+html[data-theme="ios-dark"] .dock-divider { background: #2c2c2e; }
+html[data-theme="ios-dark"] .dock-clock { color: #f2f2f7; }
+html[data-theme="ios-dark"] .brand-tag { color: #f2f2f7; }
+html[data-theme="ios-dark"] .header-title { color: #8e8e93; }
+html[data-theme="ios-dark"] .close-btn {
+    background: #1c1c1e;
+    color: #f2f2f7;
+}
+html[data-theme="ios-dark"] .close-btn:hover { background: #2c2c2e; }
+html[data-theme="ios-dark"] .card { background: #1c1c1e; }
+html[data-theme="ios-dark"] .cover-art { background: #2c2c2e; }
+html[data-theme="ios-dark"] .track-title { color: #fff; }
+html[data-theme="ios-dark"] .track-subtitle { color: #8e8e93; }
+html[data-theme="ios-dark"] .btn-control,
+html[data-theme="ios-dark"] .btn-secondary,
+html[data-theme="ios-dark"] .btn-mute,
+html[data-theme="ios-dark"] .btn-play,
+html[data-theme="ios-dark"] .btn-play:hover { color: #f2f2f7; }
+html[data-theme="ios-dark"] .btn-control:hover,
+html[data-theme="ios-dark"] .btn-secondary:hover,
+html[data-theme="ios-dark"] .btn-mute:hover { background: #2c2c2e; color: #fff; }
+html[data-theme="ios-dark"] .ios-range { background: #3a3a3c; }
+html[data-theme="ios-dark"] .ios-range::-webkit-slider-thumb { background: #fff; }
+html[data-theme="ios-dark"] .input-label { color: #8e8e93; }
+html[data-theme="ios-dark"] input[type="url"],
+html[data-theme="ios-dark"] input[type="search"],
+html[data-theme="ios-dark"] input[type="text"],
+html[data-theme="ios-dark"] input[type="number"] {
+    background: #2c2c2e;
+    color: #fff;
+}
+html[data-theme="ios-dark"] input[type="search"]:focus,
+html[data-theme="ios-dark"] input[type="text"]:focus { background: #3a3a3c; }
+html[data-theme="ios-dark"] .add-btn {
+    background: #f2f2f7;
+    color: #000;
+}
+html[data-theme="ios-dark"] .add-btn:hover { background: #fff; }
+html[data-theme="ios-dark"] .queue-header h3,
+html[data-theme="ios-dark"] .search-list-head span { color: #f2f2f7; }
+html[data-theme="ios-dark"] .clear-btn { color: #8e8e93; }
+html[data-theme="ios-dark"] .queue-item { background: #2c2c2e; }
+html[data-theme="ios-dark"] .queue-title-text,
+html[data-theme="ios-dark"] .ytm-row { color: #f2f2f7; }
+html[data-theme="ios-dark"] .queue-sub-text,
+html[data-theme="ios-dark"] .ytm-artist { color: #8e8e93; }
+html[data-theme="ios-dark"] .ytm-row:hover { background: #2c2c2e; }
+html[data-theme="ios-dark"] .radio-card-item,
+html[data-theme="ios-dark"] .phone-card,
+html[data-theme="ios-dark"] .party-panel,
+html[data-theme="ios-dark"] .theme-card {
+    background: #1c1c1e;
+    color: #f2f2f7;
+}
+html[data-theme="ios-dark"] .theme-card.active { box-shadow: inset 0 0 0 2px #f2f2f7; }
+html[data-theme="ios-dark"] .radio-header h2,
+html[data-theme="ios-dark"] .phone-card h2,
+html[data-theme="ios-dark"] .party-panel h2 { color: #f2f2f7; }
+html[data-theme="ios-dark"] .party-primary {
+    background: #f2f2f7;
+    color: #000;
+}
+html[data-theme="ios-dark"] .hud-widget { background: #1c1c1e !important; }
+html[data-theme="ios-dark"] .hud-title { color: #fff; }
+html[data-theme="ios-dark"] .hud-subtitle,
+html[data-theme="ios-dark"] .key-label { color: #8e8e93; }
+html[data-theme="ios-dark"] .hud-progress-bar { background: #3a3a3c; }
+html[data-theme="ios-dark"] .key-badge { background: #f2f2f7; color: #000; }
+
+/* Android Auto — portada grande + cola */
+html[data-theme="android"] .carplay-frame,
+html[data-theme="android-dark"] .carplay-frame{
+    width: 820px;
+    height: 500px;
+    border: 0;
+    box-shadow: 0 22px 55px rgba(0, 0, 0, 0.55);
+}
+
+html[data-theme="android"] .ambient-bg,
+html[data-theme="android-dark"] .ambient-bg{ opacity: 0.18; }
+
+html[data-theme="android"] .glass-overlay,
+html[data-theme="android-dark"] .glass-overlay{
+    background: #000;
+}
+
+html[data-theme="android"] .carplay-header,
+html[data-theme="android-dark"] .carplay-header{ margin-bottom: 8px; }
+
+html[data-theme="android"] .brand-tag,
+html[data-theme="android-dark"] .brand-tag{
+    color: #e8eaed;
+    letter-spacing: 0;
+    text-transform: none;
+    font-size: 13px;
+}
+
+html[data-theme="android"] .header-title,
+html[data-theme="android-dark"] .header-title{ display: none; }
+
+html[data-theme="android"] .dashboard-grid,
+html[data-theme="android-dark"] .dashboard-grid{
+    display: grid;
+    grid-template-columns: 0.92fr 1.2fr;
+    gap: 10px;
+}
+
+html[data-theme="android"] .queue-card,
+html[data-theme="android-dark"] .queue-card{ order: 1; }
+html[data-theme="android"] .player-card,
+html[data-theme="android-dark"] .player-card{ order: 2; }
+
+html[data-theme="android"] .player-card,
+html[data-theme="android-dark"] .player-card{
+    display: grid;
+    grid-template-columns: 1.15fr minmax(0, 1fr);
+    grid-template-areas:
+        "cover info"
+        "cover controls"
+        "cover scrub"
+        "cover volume";
+    gap: 6px 12px;
+    padding: 0;
+    min-height: 0;
+    background: #2b2b2b;
+    border: 0;
+    border-radius: 22px;
+    box-shadow: none;
+    overflow: hidden;
+}
+
+html[data-theme="android"] .cover-wrapper,
+html[data-theme="android-dark"] .cover-wrapper{
+    grid-area: cover;
+    margin: 0;
+    position: relative;
+    min-height: 0;
+    height: 100%;
+}
+
+html[data-theme="android"] .cover-art,
+html[data-theme="android-dark"] .cover-art{
+    width: 100%;
+    height: 100%;
+    min-height: 220px;
+    border-radius: 0;
+    border: 0;
+    box-shadow: none;
+}
+
+html[data-theme="android"] .cover-overlay,
+html[data-theme="android-dark"] .cover-overlay{
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    position: absolute;
+    inset: 0;
+    padding: 16px;
+    background: linear-gradient(180deg, transparent 42%, rgba(0, 0, 0, 0.62));
+    z-index: 2;
+    pointer-events: none;
+}
+
+html[data-theme="android"] .cover-overlay-title,
+html[data-theme="android-dark"] .cover-overlay-title{
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: #fff;
+    line-height: 1.1;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+
+html[data-theme="android"] .cover-overlay-artist,
+html[data-theme="android-dark"] .cover-overlay-artist{
+    margin-top: 4px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.84);
+}
+
+html[data-theme="android"] .player-info,
+html[data-theme="android-dark"] .player-info{
+    grid-area: info;
+    text-align: left;
+    margin: 0;
+    padding: 16px 16px 0 4px;
+}
+
+html[data-theme="android"] .track-title,
+html[data-theme="android-dark"] .track-title{
+    font-size: 18px;
+    font-weight: 600;
+}
+
+html[data-theme="android"] .track-subtitle,
+html[data-theme="android-dark"] .track-subtitle{
+    font-size: 13px;
+    color: #9aa0a6;
+}
+
+html[data-theme="android"] .player-controls,
+html[data-theme="android-dark"] .player-controls{
+    grid-area: controls;
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 0 10px 0 0;
+    margin: 0;
+}
+
+html[data-theme="android"] .btn-secondary,
+html[data-theme="android-dark"] .btn-secondary{ display: none; }
+
+html[data-theme="android"] .btn-control,
+html[data-theme="android-dark"] .btn-control{
+    width: 40px;
+    height: 40px;
+    color: #e8eaed;
+}
+
+html[data-theme="android"] .btn-play,
+html[data-theme="android-dark"] .btn-play,
+html[data-theme="android"] .btn-play:hover,
+html[data-theme="android-dark"] .btn-play:hover{
+    width: 42px;
+    height: 42px;
+    background: transparent;
+    color: #fff;
+    box-shadow: none;
+    font-size: 18px;
+}
+
+html[data-theme="android"] .scrubber-container,
+html[data-theme="android-dark"] .scrubber-container{
+    grid-area: scrub;
+    margin: 0;
+    padding-right: 14px;
+}
+
+html[data-theme="android"] .volume-slider-group,
+html[data-theme="android-dark"] .volume-slider-group{
+    grid-area: volume;
+    padding: 0 14px 12px 0;
+}
+
+html[data-theme="android"] .ios-range,
+html[data-theme="android-dark"] .ios-range{
+    height: 3px;
+    background: rgba(255, 255, 255, 0.28);
+}
+
+html[data-theme="android"] .ios-range::-webkit-slider-thumb,
+html[data-theme="android-dark"] .ios-range::-webkit-slider-thumb{
+    width: 12px;
+    height: 12px;
+    background: #fff;
+    box-shadow: none;
+}
+
+html[data-theme="android"] .queue-card,
+html[data-theme="android-dark"] .queue-card,
+html[data-theme="android"] .radio-card-item,
+html[data-theme="android-dark"] .radio-card-item,
+html[data-theme="android"] .phone-card,
+html[data-theme="android-dark"] .phone-card,
+html[data-theme="android"] .party-panel,
+html[data-theme="android-dark"] .party-panel{
+    background: #1c1c1c;
+    border: 0;
+    box-shadow: none;
+    border-radius: 22px;
+}
+
+html[data-theme="android"] .queue-item,
+html[data-theme="android-dark"] .queue-item{
+    background: transparent;
+    border: 0;
+    border-radius: 12px;
+    padding: 8px 8px;
+}
+
+html[data-theme="android"] .queue-item.active,
+html[data-theme="android-dark"] .queue-item.active{
+    background: #2b2b2b;
+}
+
+html[data-theme="android"],
+html[data-theme="android-dark"] input[type="search"],
+html[data-theme="android"],
+html[data-theme="android-dark"] input[type="text"],
+html[data-theme="android"],
+html[data-theme="android-dark"] input[type="number"] {
+    background: #2b2b2b;
+    border: 0;
+    color: #fff;
+}
+
+html[data-theme="android"] .add-btn,
+html[data-theme="android-dark"] .add-btn{
+    background: #fff;
+    color: #202124;
+    box-shadow: none;
+}
+
+html[data-theme="android"] .add-btn:hover,
+html[data-theme="android-dark"] .add-btn:hover{ background: #f1f3f4; }
+
+html[data-theme="android"] .hud-widget,
+html[data-theme="android-dark"] .hud-widget{
+    border: 0;
+    box-shadow: none;
+    background: #000 !important;
+}
+
+html[data-theme="android"] .hud-progress-fill,
+html[data-theme="android-dark"] .hud-progress-fill,
+html[data-theme="android"] .equalizer-bars span,
+html[data-theme="android-dark"] .equalizer-bars span{ background: #fff; }
+
+html[data-theme="android"] .key-badge,
+html[data-theme="android-dark"] .key-badge{
+    background: #fff;
+    color: #202124;
+}
+
+html[data-theme="android"] .party-primary,
+html[data-theme="android-dark"] .party-primary{
+    background: #fff;
+    color: #202124;
+}
+
+html[data-theme="android"] .carplay-dock,
+html[data-theme="android-dark"] .carplay-dock{
+    background: #000;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    height: 68px;
+}
+
+html[data-theme="android-dark"] .player-card,
+html[data-theme="android-dark"] .queue-card,
+html[data-theme="android-dark"] .radio-card-item,
+html[data-theme="android-dark"] .phone-card,
+html[data-theme="android-dark"] .party-panel {
+    background: #0a0a0a;
+}
+
+html[data-theme="android-dark"] .queue-item.active,
+html[data-theme="android-dark"] input[type="search"],
+html[data-theme="android-dark"] input[type="text"],
+html[data-theme="android-dark"] input[type="number"] {
+    background: #161616;
+}
+
+/* Spotify 1:1 — desktop / car Now Playing */
+html[data-theme="spotify"] {
+    --apple-bg: #121212;
+    --apple-card-bg: #181818;
+    --apple-card-border: transparent;
+    --apple-accent: #1ed760;
+    --apple-accent-glow: rgba(30, 215, 96, 0.28);
+    --apple-text: #ffffff;
+    --apple-subtext: #b3b3b3;
+    --apple-dock-bg: #000000;
+    --font-family: "CircularStd", "Circular Sp", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --frame-bg: #121212;
+    --frame-border: transparent;
+    --frame-highlight: transparent;
+    --frame-shadow: 0 28px 70px rgba(0, 0, 0, 0.72);
+    --frame-radius: 12px;
+    --card-radius: 8px;
+    --dock-radius: 8px;
+    --hud-bg: #181818;
+    --hud-radius: 10px;
+    --glass-bg: linear-gradient(180deg, rgba(18, 18, 18, 0.45) 0%, #121212 58%);
+    --sp-green: #1ed760;
+    --sp-green-hover: #3be477;
+    --sp-elevated: #242424;
+    --sp-logo: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z'/%3E%3C/svg%3E");
+}
+
+html[data-theme="spotify"] .carplay-frame {
+    border: 0;
+    box-shadow: 0 28px 70px rgba(0, 0, 0, 0.72);
+}
+
+html[data-theme="spotify"] .ambient-bg {
+    opacity: 0.42;
+    filter: blur(48px) saturate(1.2);
+}
+
+html[data-theme="spotify"] .carplay-dock {
+    width: 72px;
+    background: #000;
+    border-right: 0;
+    padding: 18px 0;
+}
+
+html[data-theme="spotify"] .dock-divider {
+    background: #282828;
+}
+
+html[data-theme="spotify"] .dock-item {
+    position: relative;
+    background: transparent;
+    color: #b3b3b3;
+    border-radius: 8px;
+}
+
+html[data-theme="spotify"] .dock-item:hover {
+    background: #1a1a1a;
+    color: #fff;
+}
+
+html[data-theme="spotify"] .dock-item.active {
+    background: #1a1a1a;
+    color: #fff;
+    box-shadow: none;
+}
+
+html[data-theme="spotify"] .dock-item.active::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 22%;
+    height: 56%;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+    background: var(--sp-green);
+}
+
+html[data-theme="spotify"] .dock-clock {
+    color: #b3b3b3;
+    font-weight: 600;
+}
+
+html[data-theme="spotify"] .brand-tag {
+    color: #fff;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+html[data-theme="spotify"] #brandMark {
+    font-size: 0 !important;
+    width: 20px;
+    height: 20px;
+    background: var(--sp-green);
+    -webkit-mask: var(--sp-logo) center / contain no-repeat;
+    mask: var(--sp-logo) center / contain no-repeat;
+}
+
+html[data-theme="spotify"] .header-title {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+}
+
+html[data-theme="spotify"] .close-btn {
+    background: #181818;
+    color: #b3b3b3;
+}
+
+html[data-theme="spotify"] .close-btn:hover {
+    background: var(--sp-elevated);
+    color: #fff;
+}
+
+html[data-theme="spotify"] .card {
+    background: #181818;
+    border: 0;
+    border-top: 0;
+    box-shadow: none;
+}
+
+html[data-theme="spotify"] .player-card {
+    background: transparent;
+    padding: 10px 12px 8px;
+}
+
+html[data-theme="spotify"] .cover-art {
+    width: 168px;
+    height: 168px;
+    border-radius: 8px;
+    border: 0;
+    background: #282828;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
+}
+
+html[data-theme="spotify"] .hud-cover {
+    width: 56px;
+    height: 56px;
+    border-radius: 4px;
+}
+
+html[data-theme="spotify"] .queue-thumb,
+html[data-theme="spotify"] .ytm-cover {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    border-radius: 4px;
+}
+
+html[data-theme="spotify"] .player-info {
+    text-align: left;
+    padding: 0 6px;
+}
+
+html[data-theme="spotify"] .track-title {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+}
+
+html[data-theme="spotify"] .track-subtitle {
+    font-size: 13px;
+    color: #b3b3b3;
+    margin-top: 4px;
+}
+
+html[data-theme="spotify"] .time-labels {
+    color: #a7a7a7;
+    font-size: 11px;
+}
+
+html[data-theme="spotify"] .ios-range {
+    height: 4px;
+    background: #5e5e5e;
+    border-radius: 2px;
+}
+
+html[data-theme="spotify"] .ios-range::-webkit-slider-thumb {
+    width: 12px;
+    height: 12px;
+    background: #fff;
+    box-shadow: none;
+}
+
+html[data-theme="spotify"] .ios-range:hover {
+    background: #6a6a6a;
+}
+
+html[data-theme="spotify"] .ios-range:hover::-webkit-slider-thumb {
+    background: var(--sp-green);
+}
+
+html[data-theme="spotify"] .btn-control,
+html[data-theme="spotify"] .btn-secondary {
+    color: #b3b3b3;
+    border-radius: 50%;
+}
+
+html[data-theme="spotify"] .btn-control:hover,
+html[data-theme="spotify"] .btn-secondary:hover {
+    color: #fff;
+    background: transparent;
+}
+
+html[data-theme="spotify"] .btn-secondary.active {
+    color: var(--sp-green);
+    background: transparent;
+}
+
+html[data-theme="spotify"] .btn-play {
+    width: 52px;
+    height: 52px;
+    background: var(--sp-green);
+    color: #000;
+    box-shadow: none;
+}
+
+html[data-theme="spotify"] .btn-play:hover {
+    background: var(--sp-green-hover);
+    transform: scale(1.06);
+}
+
+html[data-theme="spotify"] .volume-slider-group,
+html[data-theme="spotify"] .btn-mute {
+    color: #b3b3b3;
+}
+
+html[data-theme="spotify"] .input-label {
+    color: #b3b3b3;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-size: 10px;
+}
+
+html[data-theme="spotify"] input[type="url"],
+html[data-theme="spotify"] input[type="search"],
+html[data-theme="spotify"] input[type="text"],
+html[data-theme="spotify"] input[type="number"] {
+    background: #242424;
+    border: 0;
+    border-radius: 500px;
+    color: #fff;
+}
+
+html[data-theme="spotify"] input[type="url"]:focus,
+html[data-theme="spotify"] input[type="search"]:focus,
+html[data-theme="spotify"] input[type="text"]:focus,
+html[data-theme="spotify"] input[type="number"]:focus {
+    background: #2a2a2a;
+    box-shadow: inset 0 0 0 1px #fff;
+}
+
+html[data-theme="spotify"] .add-btn {
+    background: var(--sp-green);
+    color: #000;
+    border-radius: 500px;
+    box-shadow: none;
+    font-weight: 700;
+}
+
+html[data-theme="spotify"] .add-btn:hover {
+    background: var(--sp-green-hover);
+}
+
+html[data-theme="spotify"] .queue-header h3 {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+html[data-theme="spotify"] .clear-btn {
+    color: #b3b3b3;
+}
+
+html[data-theme="spotify"] .clear-btn:hover {
+    color: #fff;
+    text-decoration: underline;
+}
+
+html[data-theme="spotify"] .queue-item {
+    background: transparent;
+    border: 0;
+    border-radius: 6px;
+    padding: 8px 8px;
+}
+
+html[data-theme="spotify"] .queue-item:hover {
+    background: #2a2a2a;
+}
+
+html[data-theme="spotify"] .queue-item.active {
+    background: #2a2a2a;
+}
+
+html[data-theme="spotify"] .queue-item.active .queue-title-text {
+    color: var(--sp-green);
+}
+
+html[data-theme="spotify"] .queue-thumb {
+    border-radius: 4px;
+}
+
+html[data-theme="spotify"] .ytm-row {
+    border-radius: 6px;
+}
+
+html[data-theme="spotify"] .ytm-row:hover {
+    background: #2a2a2a;
+}
+
+html[data-theme="spotify"] .ytm-cover {
+    width: 40px;
+    height: 40px;
+    border-radius: 4px;
+}
+
+html[data-theme="spotify"] .ytm-title {
+    font-weight: 500;
+}
+
+html[data-theme="spotify"] .ytm-add {
+    background: transparent;
+    color: #b3b3b3;
+}
+
+html[data-theme="spotify"] .ytm-row:hover .ytm-add {
+    background: var(--sp-green);
+    color: #000;
+}
+
+html[data-theme="spotify"] .radio-card-item,
+html[data-theme="spotify"] .phone-card,
+html[data-theme="spotify"] .party-panel,
+html[data-theme="spotify"] .theme-card {
+    background: #181818;
+    border: 0;
+    box-shadow: none;
+}
+
+html[data-theme="spotify"] .theme-card.active {
+    box-shadow: inset 0 0 0 2px var(--sp-green);
+}
+
+html[data-theme="spotify"] .radio-card-item:hover,
+html[data-theme="spotify"] .theme-card:hover {
+    background: #282828;
+}
+
+html[data-theme="spotify"] .party-primary {
+    background: var(--sp-green);
+    color: #000;
+    border-radius: 500px;
+    box-shadow: none;
+    font-weight: 700;
+}
+
+html[data-theme="spotify"] #phoneIcon {
+    font-size: 0 !important;
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 12px;
+    background: var(--sp-green);
+    -webkit-mask: var(--sp-logo) center / contain no-repeat;
+    mask: var(--sp-logo) center / contain no-repeat;
+}
+
+html[data-theme="spotify"] .badge {
+    background: #242424;
+    color: #fff;
+    border: 0;
+}
+
+html[data-theme="spotify"] .hud-widget {
+    background: #181818 !important;
+    border: 0;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+}
+
+html[data-theme="spotify"] .hud-cover {
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+}
+
+html[data-theme="spotify"] .hud-title {
+    font-weight: 700;
+}
+
+html[data-theme="spotify"] .hud-subtitle {
+    color: #b3b3b3;
+}
+
+html[data-theme="spotify"] .hud-progress-bar {
+    height: 4px;
+    background: #5e5e5e;
+    box-shadow: none;
+}
+
+html[data-theme="spotify"] .hud-progress-fill,
+html[data-theme="spotify"] .equalizer-bars span {
+    background: var(--sp-green);
+}
+
+html[data-theme="spotify"] .key-badge {
+    background: var(--sp-green);
+    color: #000;
+    font-weight: 700;
+}
+
+html[data-theme="spotify"] .status-msg {
+    color: #b3b3b3;
+}
+
+html[data-theme="spotify"] .search-list-head span {
+    font-size: 14px;
+    font-weight: 700;
+}
